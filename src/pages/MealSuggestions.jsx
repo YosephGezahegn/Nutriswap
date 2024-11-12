@@ -1,12 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import FoodSearch from '../components/FoodSearch';
 import { searchFood } from '../services/foodApi';
+import { updateSuggestions, setLoading } from '../redux/slices/suggestionsSlice';
 
 function MealSuggestions() {
-  const [suggestions, setSuggestions] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate(); // Hook to handle navigation
+  const [query, setQuery] = useState('');
+  const suggestions = useSelector((state) => state.suggestions.data);
+  const loading = useSelector((state) => state.suggestions.loading);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -19,12 +23,12 @@ function MealSuggestions() {
   }, [loading]);
 
   const handleSearch = useCallback(
-    debounce(async (query) => {
-      if (!query.trim()) return;
+    debounce(async (searchQuery) => {
+      if (!searchQuery.trim()) return;
 
-      setLoading(true);
+      dispatch(setLoading(true));
       try {
-        const results = await searchFood(query);
+        const results = await searchFood(searchQuery);
         const meals = results.map((result) => {
           if (!result || !result.recipe) return null; // Null check for result and recipe to avoid runtime errors
           const recipe = result.recipe;
@@ -38,14 +42,14 @@ function MealSuggestions() {
             image: recipe.image || 'https://via.placeholder.com/150',
           };
         }).filter(Boolean);
-        setSuggestions(meals);
+        dispatch(updateSuggestions(meals));
       } catch (error) {
         console.error('Error fetching suggestions:', error);
       } finally {
-        setLoading(false);
+        dispatch(setLoading(false));
       }
     }, 300), // Debounce delay of 300ms to limit API requests
-    []
+    [dispatch]
   );
 
   const handleMealClick = (id) => {
@@ -57,7 +61,10 @@ function MealSuggestions() {
       <h2 className="text-2xl font-bold">Meal Suggestions</h2>
 
       {/* Search Component */}
-      <FoodSearch onSelect={handleSearch} />
+      <FoodSearch onSelect={(searchQuery) => {
+        setQuery(searchQuery);
+        handleSearch(searchQuery);
+      }} />
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
@@ -72,7 +79,7 @@ function MealSuggestions() {
               <div
                 key={meal.id}
                 className="card hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => handleMealClick(meal.id)} // Navigate on meal click
+                onClick={() => handleMealClick(meal.id)}
               >
                 <img
                   src={meal.image}

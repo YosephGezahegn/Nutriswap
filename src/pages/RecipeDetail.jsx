@@ -1,9 +1,14 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
 
 const RecipeDetail = () => {
-  const location = useLocation();
-  const { recipe } = location.state || {}; // Extract recipe from location state
+  const { id } = useParams(); // Extract the recipe ID from the URL parameters
+
+  // Get the specific recipe from the Redux store
+  const recipe = useSelector((state) =>
+    state.suggestions.suggestions.find((suggestion) => suggestion.id === id)
+  );
 
   if (!recipe) {
     return <div className="text-center text-gray-600">Recipe not found. Please go back and try again.</div>;

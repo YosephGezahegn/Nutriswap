@@ -1,47 +1,35 @@
-import { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { searchFood } from '../services/foodApi';
+import { fetchFoods, setQuery } from '../redux/slices/foodSearchSlice';
 
 function FoodSearch({ onSelect }) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const { query, results, loading } = useSelector((state) => state.foodSearch);
 
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
 
-    setLoading(true);
-    try {
-      const foods = await searchFood(query);
-      const validFoods = foods.filter((result) => result?.recipe); // Filter out any invalid data
-      setResults(validFoods);
-    } catch (error) {
-      console.error('Search failed:', error);
-    } finally {
-      setLoading(false);
-    }
+    dispatch(fetchFoods(query));
   };
 
   const handleSelectRecipe = (recipe) => {
-    // Navigate to RecipeDetail page with the entire recipe data
     navigate(`/recipe/${recipe.uri.split('#recipe_')[1]}`, { state: { recipe } });
   };
 
   const handleAddMeal = (recipe) => {
-    // Pass the selected recipe to parent component to add it
     onSelect(recipe);
   };
 
   return (
     <div className="space-y-4">
-      {/* Search Form */}
       <form onSubmit={handleSearch} className="flex gap-2">
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => dispatch(setQuery(e.target.value))}
           placeholder="Search for a food..."
           className="flex-1 rounded-md border-gray-300 shadow-sm"
         />
@@ -50,7 +38,6 @@ function FoodSearch({ onSelect }) {
         </button>
       </form>
 
-      {/* Search Results */}
       {results.length > 0 && (
         <div className="max-h-60 overflow-y-auto space-y-2">
           {results.map((result) => {
@@ -86,7 +73,7 @@ function FoodSearch({ onSelect }) {
                   <button
                     className="btn btn-primary text-sm px-4 py-2 rounded-md"
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevent triggering handleSelectRecipe
+                      e.stopPropagation();
                       handleAddMeal(recipe);
                     }}
                   >

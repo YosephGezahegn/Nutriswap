@@ -1,18 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { addMeal, removeMeal, swapMeal } from '../redux/slices/mealsSlice';
 import { searchFood } from '../services/foodApi';
 import FoodSearch from '../components/FoodSearch';
+import { setCurrentMeal, setSuggestedAlternative, resetSwap } from '../redux/slices/swapSlice';
 
 function FoodLog() {
+  const dispatch = useDispatch();
+  const meals = useSelector((state) => state.meals);
   const [showSearch, setShowSearch] = useState(false);
   const [selectedMealType, setSelectedMealType] = useState(null);
-  const [selectedMeal, setSelectedMeal] = useState(null);
-  const [showSwapOptions, setShowSwapOptions] = useState(false);
   const [swapOptions, setSwapOptions] = useState([]);
-  const [meals, setMeals] = useState({
-    breakfast: [],
-    lunch: [],
-    dinner: [],
-  });
 
   // Fixed meal times
   const MEAL_TIMES = {
@@ -54,47 +52,30 @@ function FoodLog() {
   const handleAddMeal = (mealData) => {
     if (!selectedMealType) return;
 
-    const recipe = mealData.recipe ? mealData.recipe : mealData;
-
     const newMeal = {
       id: new Date().getTime(),
-      name: recipe.label || 'Unknown Meal',
+      name: mealData.label || 'Unknown Meal',
       time: MEAL_TIMES[selectedMealType] || 'Unknown Time',
-      items: Array.isArray(recipe.ingredientLines) ? recipe.ingredientLines : [],
-      calories: recipe?.totalNutrients?.ENERC_KCAL?.quantity
-        ? Math.round(recipe.totalNutrients.ENERC_KCAL.quantity)
-        : 0,
-      protein: recipe?.totalNutrients?.PROCNT?.quantity
-        ? Math.round(recipe.totalNutrients.PROCNT.quantity)
-        : 0,
-      carbs: recipe?.totalNutrients?.CHOCDF?.quantity
-        ? Math.round(recipe.totalNutrients.CHOCDF.quantity)
-        : 0,
-      fat: recipe?.totalNutrients?.FAT?.quantity
-        ? Math.round(recipe.totalNutrients.FAT.quantity)
-        : 0,
+      items: Array.isArray(mealData.ingredientLines) ? mealData.ingredientLines : [],
+      calories: Math.round(mealData.totalNutrients?.ENERC_KCAL?.quantity || 0),
+      protein: Math.round(mealData.totalNutrients?.PROCNT?.quantity || 0),
+      carbs: Math.round(mealData.totalNutrients?.CHOCDF?.quantity || 0),
+      fat: Math.round(mealData.totalNutrients?.FAT?.quantity || 0),
     };
 
-    setMeals((prevMeals) => ({
-      ...prevMeals,
-      [selectedMealType]: [...(prevMeals[selectedMealType] || []), newMeal],
-    }));
-
+    dispatch(addMeal({ mealType: selectedMealType, meal: newMeal }));
     setShowSearch(false);
     setSelectedMealType(null);
   };
 
   // Remove meal from a specific meal type
   const handleRemoveMeal = (mealType, mealId) => {
-    setMeals((prevMeals) => ({
-      ...prevMeals,
-      [mealType]: prevMeals[mealType].filter((meal) => meal.id !== mealId),
-    }));
+    dispatch(removeMeal({ mealType, mealId }));
   };
 
   // Handle the swap meal logic to fetch alternatives
   const handleSwapMeal = async (meal) => {
-    setSelectedMeal(meal);
+    dispatch(setCurrentMeal(meal));
     setShowSwapOptions(true);
 
     try {
@@ -121,56 +102,15 @@ function FoodLog() {
 
   // Handle selecting a meal to swap with the current meal
   const handleSelectSwap = (newMeal) => {
-    if (selectedMeal) {
-      const mealType = Object.keys(meals).find((type) =>
-        meals[type].some((meal) => meal.id === selectedMeal.id)
-      );
-
-      if (mealType) {
-        setMeals((prevMeals) => ({
-          ...prevMeals,
-          [mealType]: prevMeals[mealType].map((meal) =>
-            meal.id === selectedMeal.id ? { ...newMeal, id: meal.id, time: meal.time } : meal
-          ),
-        }));
-      }
-
-      setShowSwapOptions(false);
-      setSelectedMeal(null);
-    }
-  };
-
-  // Helper function to determine styling based on comparison
-  const getNutrientChangeStyle = (oldValue, newValue) => {
-    return newValue < oldValue ? 'text-green-600' : 'text-red-600';
-  };
-
-  // Render dashboard showing daily goals and progress
-  const renderDashboard = () => {
-    return (
-      <div className="dashboard bg-white p-4 rounded shadow-md mb-6">
-        <h3 className="text-xl font-bold mb-4">Daily Goals Dashboard</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Object.keys(DAILY_GOALS).map((key) => (
-            <div key={key} className="bg-gray-50 p-4 rounded-md">
-              <h4 className="font-semibold capitalize">{key}</h4>
-              <p>
-                {currentTotals[key]} / {DAILY_GOALS[key]}{' '}
-                <span className="text-sm text-gray-500">g (Remaining: {Math.max(DAILY_GOALS[key] - currentTotals[key], 0)} g)</span>
-              </p>
-              <div className="w-full bg-gray-300 rounded-full h-4 mt-2">
-                <div
-                  className="bg-primary h-4 rounded-full"
-                  style={{
-                    width: `${Math.min((currentTotals[key] / DAILY_GOALS[key]) * 100, 100)}%`,
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+    const mealType = Object.keys(meals).find((type) =>
+      meals[type].some((meal) => meal.id === newMeal.id)
     );
+
+    if (mealType) {
+      dispatch(swapMeal({ mealType, mealId: newMeal.id, newMeal }));
+    }
+    setShowSwapOptions(false);
+    dispatch(resetSwap());
   };
 
   // Render meals for breakfast, lunch, or dinner
@@ -208,14 +148,12 @@ function FoodLog() {
                   >
                     Remove
                   </button>
-                  {meal.calories > DAILY_GOALS.calories * 0.4 && (
-                    <button
-                      className="text-blue-500 hover:text-blue-700"
-                      onClick={() => handleSwapMeal(meal)}
-                    >
-                      Swap
-                    </button>
-                  )}
+                  <button
+                    className="text-blue-500 hover:text-blue-700"
+                    onClick={() => handleSwapMeal(meal)}
+                  >
+                    Swap
+                  </button>
                 </div>
               </div>
               <ul className="space-y-1 mt-2">
@@ -238,9 +176,6 @@ function FoodLog() {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Food Log</h2>
-
-      {/* Daily Goals Dashboard */}
-      {renderDashboard()}
 
       {/* Breakfast Section */}
       {renderMeals('breakfast')}
@@ -270,17 +205,17 @@ function FoodLog() {
                   <div key={index} className="flex flex-col p-2 border rounded-md hover:bg-gray-50">
                     {/* Nutritional Comparison */}
                     <div className="flex flex-col space-y-1 mb-2">
-                      <p className={`text-sm ${getNutrientChangeStyle(selectedMeal.calories, option.calories)}`}>
-                        <span className="font-bold">Calories:</span> {selectedMeal.calories} → {option.calories}
+                      <p>
+                        <span className="font-bold">Calories:</span> {selectedMeal?.calories} → {option.calories}
                       </p>
-                      <p className={`text-sm ${getNutrientChangeStyle(selectedMeal.protein, option.protein)}`}>
-                        <span className="font-bold">Protein:</span> {selectedMeal.protein}g → {option.protein}g
+                      <p>
+                        <span className="font-bold">Protein:</span> {selectedMeal?.protein}g → {option.protein}g
                       </p>
-                      <p className={`text-sm ${getNutrientChangeStyle(selectedMeal.carbs, option.carbs)}`}>
-                        <span className="font-bold">Carbs:</span> {selectedMeal.carbs}g → {option.carbs}g
+                      <p>
+                        <span className="font-bold">Carbs:</span> {selectedMeal?.carbs}g → {option.carbs}g
                       </p>
-                      <p className={`text-sm ${getNutrientChangeStyle(selectedMeal.fat, option.fat)}`}>
-                        <span className="font-bold">Fat:</span> {selectedMeal.fat}g → {option.fat}g
+                      <p>
+                        <span className="font-bold">Fat:</span> {selectedMeal?.fat}g → {option.fat}g
                       </p>
                     </div>
 
@@ -310,7 +245,7 @@ function FoodLog() {
               className="btn btn-secondary mt-4"
               onClick={() => {
                 setShowSwapOptions(false);
-                setSelectedMeal(null);
+                dispatch(resetSwap());
               }}
             >
               Cancel

@@ -1,38 +1,35 @@
-import { useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { setFormData, resetFormData, addFoodItem, toggleFoodSearch } from '../redux/slices/mealFormSlice';
 import FoodSearch from './FoodSearch';
 
 function MealForm({ meal, onSubmit, onClose }) {
-  const [formData, setFormData] = useState({
-    name: meal?.name || '',
-    time: meal?.time || '',
-    calories: meal?.calories || 0,
-    protein: meal?.protein || 0,
-    carbs: meal?.carbs || 0,
-    fat: meal?.fat || 0,
-    items: meal?.items || [],
-  });
+  const dispatch = useDispatch();
+  const { formData, showFoodSearch } = useSelector((state) => state.mealForm);
 
-  const [showFoodSearch, setShowFoodSearch] = useState(false);
+  // Initialize form data if meal is provided (for edit)
+  if (meal) {
+    dispatch(setFormData({
+      name: meal.name,
+      time: meal.time,
+      calories: meal.calories,
+      protein: meal.protein,
+      carbs: meal.carbs,
+      fat: meal.fat,
+      items: meal.items,
+    }));
+  }
 
   const handleFoodSelect = (food) => {
     const newItem = {
       name: food.label,
-      calories: Math.round(food.nutrients.ENERC_KCAL || 0),
-      protein: Math.round(food.nutrients.PROCNT || 0),
-      carbs: Math.round(food.nutrients.CHOCDF || 0),
-      fat: Math.round(food.nutrients.FAT || 0),
+      calories: Math.round(food.totalNutrients?.ENERC_KCAL?.quantity || 0),
+      protein: Math.round(food.totalNutrients?.PROCNT?.quantity || 0),
+      carbs: Math.round(food.totalNutrients?.CHOCDF?.quantity || 0),
+      fat: Math.round(food.totalNutrients?.FAT?.quantity || 0),
     };
 
-    setFormData({
-      ...formData,
-      items: [...formData.items, newItem.name],
-      calories: formData.calories + newItem.calories,
-      protein: formData.protein + newItem.protein,
-      carbs: formData.carbs + newItem.carbs,
-      fat: formData.fat + newItem.fat,
-    });
-
-    setShowFoodSearch(false);
+    dispatch(addFoodItem(newItem));
+    dispatch(toggleFoodSearch());
   };
 
   const handleSubmit = (e) => {
@@ -41,6 +38,7 @@ function MealForm({ meal, onSubmit, onClose }) {
       ...formData,
       id: meal?.id || Date.now(),
     });
+    dispatch(resetFormData());
     onClose();
   };
 
@@ -57,7 +55,7 @@ function MealForm({ meal, onSubmit, onClose }) {
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => dispatch(setFormData({ name: e.target.value }))}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
               required
             />
@@ -68,7 +66,7 @@ function MealForm({ meal, onSubmit, onClose }) {
             <input
               type="time"
               value={formData.time}
-              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+              onChange={(e) => dispatch(setFormData({ time: e.target.value }))}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
               required
             />
@@ -88,7 +86,7 @@ function MealForm({ meal, onSubmit, onClose }) {
             </div>
             <button
               type="button"
-              onClick={() => setShowFoodSearch(true)}
+              onClick={() => dispatch(toggleFoodSearch())}
               className="mt-2 text-sm text-primary hover:text-primary/80"
             >
               + Add Food Item
@@ -101,7 +99,7 @@ function MealForm({ meal, onSubmit, onClose }) {
               <input
                 type="number"
                 value={formData.calories}
-                onChange={(e) => setFormData({ ...formData, calories: Number(e.target.value) })}
+                onChange={(e) => dispatch(setFormData({ calories: Number(e.target.value) }))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                 required
               />
@@ -111,7 +109,7 @@ function MealForm({ meal, onSubmit, onClose }) {
               <input
                 type="number"
                 value={formData.protein}
-                onChange={(e) => setFormData({ ...formData, protein: Number(e.target.value) })}
+                onChange={(e) => dispatch(setFormData({ protein: Number(e.target.value) }))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                 required
               />
@@ -121,7 +119,7 @@ function MealForm({ meal, onSubmit, onClose }) {
               <input
                 type="number"
                 value={formData.carbs}
-                onChange={(e) => setFormData({ ...formData, carbs: Number(e.target.value) })}
+                onChange={(e) => dispatch(setFormData({ carbs: Number(e.target.value) }))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                 required
               />
@@ -131,7 +129,7 @@ function MealForm({ meal, onSubmit, onClose }) {
               <input
                 type="number"
                 value={formData.fat}
-                onChange={(e) => setFormData({ ...formData, fat: Number(e.target.value) })}
+                onChange={(e) => dispatch(setFormData({ fat: Number(e.target.value) }))}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                 required
               />
@@ -144,7 +142,10 @@ function MealForm({ meal, onSubmit, onClose }) {
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                dispatch(resetFormData());
+                onClose();
+              }}
               className="btn bg-gray-200 hover:bg-gray-300 flex-1"
             >
               Cancel
@@ -158,7 +159,7 @@ function MealForm({ meal, onSubmit, onClose }) {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold">Search Food</h3>
                 <button
-                  onClick={() => setShowFoodSearch(false)}
+                  onClick={() => dispatch(toggleFoodSearch())}
                   className="text-gray-500 hover:text-gray-700"
                 >
                   ✕

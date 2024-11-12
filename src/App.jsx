@@ -1,4 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Provider } from 'react-redux'; // Import Provider to wrap around the app
+import store from './redux/store'; // Import the configured Redux store
+
 import Navbar from './components/Navbar.jsx';
 import Onboarding from './pages/Onboarding.jsx';
 import Home from './pages/Home.jsx';
@@ -11,23 +14,25 @@ import RecipeDetail from './pages/RecipeDetail.jsx';
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="container mx-auto px-4 py-8">
-          <Routes>
-            <Route path="/" element={<Onboarding />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/food-log" element={<FoodLog />} />
-            <Route path="/meal-suggestions" element={<MealSuggestions />} />
-            <Route path="/progress" element={<Progress />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/recipe/:id" element={<RecipeDetail />} /> {/* Added route for RecipeDetail */}
-          </Routes>
-        </main>
-      </div>
-    </Router>
+    <Provider store={store}>
+      <Router>
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <main className="container mx-auto px-4 py-8">
+            <Routes>
+              <Route path="/" element={<Onboarding />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/home" element={<Home />} />
+              <Route path="/food-log" element={<FoodLog />} />
+              <Route path="/meal-suggestions" element={<MealSuggestions />} />
+              <Route path="/progress" element={<Progress />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/recipe/:id" element={<RecipeDetail />} />
+            </Routes>
+          </main>
+        </div>
+      </Router>
+    </Provider>
   );
 }
 
