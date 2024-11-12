@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Provider } from 'react-redux'; // Import Provider to wrap around the app
-import store from './redux/store'; // Import the configured Redux store
+import { store } from './redux/store';
 
 import Navbar from './components/Navbar.jsx';
 import Onboarding from './pages/Onboarding.jsx';

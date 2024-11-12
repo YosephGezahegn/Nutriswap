@@ -10,17 +10,25 @@ function FoodSearch({ onSelect }) {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!query.trim()) return;
-
+        if (typeof query !== 'string' || !query.trim()) return;
     dispatch(fetchFoods(query));
   };
 
   const handleSelectRecipe = (recipe) => {
-    navigate(`/recipe/${recipe.uri.split('#recipe_')[1]}`, { state: { recipe } });
+    const recipeId = recipe.uri.split('#recipe_')[1];
+    navigate(`/recipe/${recipeId}`);
   };
 
   const handleAddMeal = (recipe) => {
-    onSelect(recipe);
+    const formattedRecipe = {
+      name: recipe.label,
+      calories: Math.round(recipe.totalNutrients?.ENERC_KCAL?.quantity || 0),
+      protein: Math.round(recipe.totalNutrients?.PROCNT?.quantity || 0),
+      carbs: Math.round(recipe.totalNutrients?.CHOCDF?.quantity || 0),
+      fat: Math.round(recipe.totalNutrients?.FAT?.quantity || 0),
+      items: recipe.ingredientLines || [],
+    };
+    onSelect(formattedRecipe);
   };
 
   return (
@@ -31,7 +39,7 @@ function FoodSearch({ onSelect }) {
           value={query}
           onChange={(e) => dispatch(setQuery(e.target.value))}
           placeholder="Search for a food..."
-          className="flex-1 rounded-md border-gray-300 shadow-sm"
+          className="flex-1 rounded-md border-gray-300 shadow-sm p-2"
         />
         <button type="submit" className="btn btn-primary">
           {loading ? 'Searching...' : 'Search'}
@@ -42,7 +50,6 @@ function FoodSearch({ onSelect }) {
         <div className="max-h-60 overflow-y-auto space-y-2">
           {results.map((result) => {
             const recipe = result.recipe;
-
             return (
               <div
                 key={recipe.uri}
@@ -59,25 +66,24 @@ function FoodSearch({ onSelect }) {
                   <div>
                     <div className="font-medium">{recipe.label}</div>
                     <div className="text-sm text-gray-600">
-                      {recipe.totalNutrients?.ENERC_KCAL?.quantity?.toFixed(0) || 0} kcal per serving
+                      {Math.round(recipe.totalNutrients?.ENERC_KCAL?.quantity || 0)} kcal per serving
                     </div>
                   </div>
                 </div>
                 <div className="flex space-x-2">
                   <button
+                    type="button"
                     className="btn btn-secondary text-sm px-4 py-2 rounded-md"
                     onClick={() => handleSelectRecipe(recipe)}
                   >
                     Details
                   </button>
                   <button
+                    type="button"
                     className="btn btn-primary text-sm px-4 py-2 rounded-md"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddMeal(recipe);
-                    }}
+                    onClick={() => handleAddMeal(recipe)}
                   >
-                    +
+                    Add
                   </button>
                 </div>
               </div>

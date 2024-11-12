@@ -1,14 +1,30 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
+import { fetchRecipeDetail, resetRecipeDetail } from '../redux/slices/recipeDetailSlice';
 
 const RecipeDetail = () => {
-  const { id } = useParams(); // Extract the recipe ID from the URL parameters
+  const { id } = useParams();
+  const dispatch = useDispatch();
+  const recipeDetail = useSelector((state) => state.recipeDetail);
+  const { data: recipe, loading, error } = recipeDetail || {}; // Fallback to prevent destructuring undefined
 
-  // Get the specific recipe from the Redux store
-  const recipe = useSelector((state) =>
-    state.suggestions.suggestions.find((suggestion) => suggestion.id === id)
-  );
+  useEffect(() => {
+    dispatch(fetchRecipeDetail(id));
+
+    // Cleanup function to reset state when component unmounts
+    return () => {
+      dispatch(resetRecipeDetail());
+    };
+  }, [dispatch, id]);
+
+  if (loading) {
+    return <div className="text-center text-lg">Loading recipe details...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500">{error}</div>;
+  }
 
   if (!recipe) {
     return <div className="text-center text-gray-600">Recipe not found. Please go back and try again.</div>;
@@ -46,19 +62,19 @@ const RecipeDetail = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <h2 className="text-xl font-semibold mb-2">Diet & Health Labels</h2>
-          <p><strong>Diet Labels:</strong> {dietLabels.length > 0 ? dietLabels.join(', ') : 'None'}</p>
-          <p><strong>Health Labels:</strong> {healthLabels.length > 0 ? healthLabels.join(', ') : 'None'}</p>
-          <p><strong>Cautions:</strong> {cautions.length > 0 ? cautions.join(', ') : 'None'}</p>
+          <p><strong>Diet Labels:</strong> {dietLabels?.length > 0 ? dietLabels.join(', ') : 'None'}</p>
+          <p><strong>Health Labels:</strong> {healthLabels?.length > 0 ? healthLabels.join(', ') : 'None'}</p>
+          <p><strong>Cautions:</strong> {cautions?.length > 0 ? cautions.join(', ') : 'None'}</p>
         </div>
 
         <div>
           <h2 className="text-xl font-semibold mb-2">Basic Information</h2>
-          <p><strong>Cuisine Type:</strong> {cuisineType ? cuisineType.join(', ') : 'Unknown'}</p>
-          <p><strong>Meal Type:</strong> {mealType ? mealType.join(', ') : 'Unknown'}</p>
-          <p><strong>Dish Type:</strong> {dishType ? dishType.join(', ') : 'Unknown'}</p>
+          <p><strong>Cuisine Type:</strong> {cuisineType?.join(', ') || 'Unknown'}</p>
+          <p><strong>Meal Type:</strong> {mealType?.join(', ') || 'Unknown'}</p>
+          <p><strong>Dish Type:</strong> {dishType?.join(', ') || 'Unknown'}</p>
           <p><strong>Servings:</strong> {servings}</p>
-          <p><strong>Total Weight:</strong> {totalWeight.toFixed(2)} g</p>
-          <p><strong>Calories:</strong> {calories.toFixed(2)} kcal</p>
+          <p><strong>Total Weight:</strong> {totalWeight?.toFixed(2)} g</p>
+          <p><strong>Calories:</strong> {calories?.toFixed(2)} kcal</p>
         </div>
       </div>
 
@@ -79,14 +95,15 @@ const RecipeDetail = () => {
 
           <div className="text-right font-medium text-sm mt-2">% Daily Value *</div>
 
-          {Object.entries(totalNutrients).map(([key, nutrient]) => (
-            <div key={key} className="flex justify-between border-t py-2">
-              <span className="font-bold">{nutrient.label}</span>
-              <span>
-                {nutrient.quantity.toFixed(2)} {nutrient.unit}
-              </span>
-            </div>
-          ))}
+          {totalNutrients &&
+            Object.entries(totalNutrients).map(([key, nutrient]) => (
+              <div key={key} className="flex justify-between border-t py-2">
+                <span className="font-bold">{nutrient.label}</span>
+                <span>
+                  {nutrient.quantity?.toFixed(2)} {nutrient.unit}
+                </span>
+              </div>
+            ))}
 
           <div className="flex flex-col mt-4 text-xs border-t pt-2">
             <div>* The % Daily Value (DV) tells you how much a nutrient in a serving of food contributes to a daily diet. 2,000 calories a day is used for general nutrition advice.</div>
@@ -97,7 +114,7 @@ const RecipeDetail = () => {
       <div className="mb-4">
         <h2 className="text-xl font-semibold mb-2">Ingredients</h2>
         <ul className="list-disc list-inside">
-          {ingredientLines.map((ingredient, index) => (
+          {ingredientLines?.map((ingredient, index) => (
             <li key={index}>{ingredient}</li>
           ))}
         </ul>

@@ -1,12 +1,10 @@
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState } from 'react'; // Add useState here
 import { Link, useLocation } from 'react-router-dom';
-import { HomeIcon, BookOpenIcon, CakeIcon, ChartBarIcon, UserGroupIcon, DocumentTextIcon, MenuIcon, XIcon } from '@heroicons/react/24/outline';
-import { toggleMenu, closeMenu } from '../redux/slices/navbarSlice';
+import { HomeIcon, BookOpenIcon, CakeIcon, ChartBarIcon, UserGroupIcon, DocumentTextIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'; // Updated imports
 
 function Navbar() {
   const location = useLocation();
-  const dispatch = useDispatch();
-  const isMenuOpen = useSelector((state) => state.navbar.isMenuOpen);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navItems = [
     { path: '/home', icon: HomeIcon, label: 'Home' },
@@ -30,12 +28,12 @@ function Navbar() {
           <div className="md:hidden">
             <button
               className="text-primary hover:text-primary-dark focus:outline-none"
-              onClick={() => dispatch(toggleMenu())}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? (
-                <XIcon className="h-6 w-6" />
+                <XMarkIcon className="h-6 w-6" />
               ) : (
-                <MenuIcon className="h-6 w-6" />
+                <Bars3Icon className="h-6 w-6" />
               )}
             </button>
           </div>
@@ -74,7 +72,7 @@ function Navbar() {
                 <Link
                   key={path}
                   to={path}
-                  onClick={() => dispatch(closeMenu())} // Close menu on link click
+                  onClick={() => setIsMenuOpen(false)} // Close menu on link click
                   className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium
                     ${location.pathname === path 
                       ? 'text-primary bg-primary/10' 
@@ -89,7 +87,7 @@ function Navbar() {
               {/* Sign In Button */}
               <Link
                 to="/auth"
-                onClick={() => dispatch(closeMenu())} // Close menu on link click
+                onClick={() => setIsMenuOpen(false)} // Close menu on link click
                 className="btn btn-primary w-full text-center mt-2"
               >
                 Sign In

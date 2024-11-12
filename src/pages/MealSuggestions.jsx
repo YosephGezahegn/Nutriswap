@@ -1,59 +1,79 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import FoodSearch from '../components/FoodSearch';
-import { searchFood } from '../services/foodApi';
 import { updateSuggestions, setLoading } from '../redux/slices/suggestionsSlice';
+import { searchFood } from '../services/foodApi';
 
 function MealSuggestions() {
-  const [query, setQuery] = useState('');
-  const suggestions = useSelector((state) => state.suggestions.data);
-  const loading = useSelector((state) => state.suggestions.loading);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const suggestions = useSelector((state) => state.suggestions.data);
+  const loading = useSelector((state) => state.suggestions.loading);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (loading) {
-        console.warn('Request is taking longer than expected...');
-      }
-    }, 5000); // Set a timeout to handle long API requests
-
-    return () => clearTimeout(timeoutId);
-  }, [loading]);
-
-  const handleSearch = useCallback(
-    debounce(async (searchQuery) => {
-      if (!searchQuery.trim()) return;
-
+    // Load default egg-based suggestions when component mounts
+    const loadDefaultSuggestions = async () => {
       dispatch(setLoading(true));
       try {
-        const results = await searchFood(searchQuery);
-        const meals = results.map((result) => {
-          if (!result || !result.recipe) return null; // Null check for result and recipe to avoid runtime errors
+        const results = await searchFood('egg recipes');
+        const meals = results
+          .filter(result => result?.recipe)
+          .map(result => {
+            const recipe = result.recipe;
+            return {
+              id: recipe.uri.split('#recipe_')[1],
+              name: recipe.label,
+              calories: Math.round(recipe.calories || 0),
+              protein: Math.round(recipe.totalNutrients?.PROCNT?.quantity || 0),
+              carbs: Math.round(recipe.totalNutrients?.CHOCDF?.quantity || 0),
+              fat: Math.round(recipe.totalNutrients?.FAT?.quantity || 0),
+              image: recipe.image || 'https://via.placeholder.com/150',
+              ingredients: recipe.ingredientLines || [],
+            };
+          });
+        dispatch(updateSuggestions(meals));
+      } catch (error) {
+        console.error('Error fetching default suggestions:', error);
+      } finally {
+        dispatch(setLoading(false));
+      }
+    };
+
+    loadDefaultSuggestions();
+  }, [dispatch]);
+
+  const handleSearch = async (searchQuery) => {
+    if (typeof searchQuery !== 'string' || !searchQuery.trim()) return;
+
+    dispatch(setLoading(true));
+    try {
+      const results = await searchFood(searchQuery);
+      const meals = results
+        .filter(result => result?.recipe)
+        .map(result => {
           const recipe = result.recipe;
           return {
             id: recipe.uri.split('#recipe_')[1],
-            name: recipe.label || 'Unknown Recipe',
+            name: recipe.label,
             calories: Math.round(recipe.calories || 0),
             protein: Math.round(recipe.totalNutrients?.PROCNT?.quantity || 0),
             carbs: Math.round(recipe.totalNutrients?.CHOCDF?.quantity || 0),
             fat: Math.round(recipe.totalNutrients?.FAT?.quantity || 0),
             image: recipe.image || 'https://via.placeholder.com/150',
+            ingredients: recipe.ingredientLines || [],
           };
-        }).filter(Boolean);
-        dispatch(updateSuggestions(meals));
-      } catch (error) {
-        console.error('Error fetching suggestions:', error);
-      } finally {
-        dispatch(setLoading(false));
-      }
-    }, 300), // Debounce delay of 300ms to limit API requests
-    [dispatch]
-  );
+        });
+      dispatch(updateSuggestions(meals));
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
 
   const handleMealClick = (id) => {
-    navigate(`/recipe/${id}`); // Navigate to RecipeDetail page with the recipe id
+    navigate(`/recipe/${id}`);
   };
 
   return (
@@ -61,10 +81,7 @@ function MealSuggestions() {
       <h2 className="text-2xl font-bold">Meal Suggestions</h2>
 
       {/* Search Component */}
-      <FoodSearch onSelect={(searchQuery) => {
-        setQuery(searchQuery);
-        handleSearch(searchQuery);
-      }} />
+      <FoodSearch onSelect={handleSearch} />
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
@@ -92,6 +109,19 @@ function MealSuggestions() {
                   <p className="text-sm text-gray-600">Protein: {meal.protein} g</p>
                   <p className="text-sm text-gray-600">Carbs: {meal.carbs} g</p>
                   <p className="text-sm text-gray-600">Fat: {meal.fat} g</p>
+                  {meal.ingredients && (
+                    <div className="mt-2">
+                      <p className="text-sm font-medium text-gray-700">Ingredients:</p>
+                      <ul className="text-sm text-gray-600">
+                        {meal.ingredients.slice(0, 3).map((ingredient, index) => (
+                          <li key={index} className="truncate">{ingredient}</li>
+                        ))}
+                        {meal.ingredients.length > 3 && (
+                          <li className="text-primary">+{meal.ingredients.length - 3} more...</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
             ))
@@ -100,16 +130,6 @@ function MealSuggestions() {
       )}
     </div>
   );
-}
-
-// Debounce function to limit API calls
-function debounce(func, wait) {
-  let timeout;
-  return function (...args) {
-    const context = this;
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(context, args), wait);
-  };
 }
 
 export default MealSuggestions;

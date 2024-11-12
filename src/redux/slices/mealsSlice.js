@@ -22,28 +22,44 @@ const mealsSlice = createSlice({
   initialState,
   reducers: {
     addMeal: (state, action) => {
-      const { mealType, mealData } = action.payload;
-      state.meals[mealType].push(mealData);
+      const { mealType, meal } = action.payload;
+      if (!state.meals[mealType]) {
+        state.meals[mealType] = [];
+      }
+      state.meals[mealType].push({
+        ...meal,
+        id: meal.id || Date.now(),
+        calories: Number(meal.calories) || 0,
+        protein: Number(meal.protein) || 0,
+        carbs: Number(meal.carbs) || 0,
+        fat: Number(meal.fat) || 0,
+      });
+      
+      // Update weekly progress
+      const today = new Date().getDay();
+      const dayIndex = today === 0 ? 6 : today - 1; // Convert to 0-6 range where 0 is Monday
+      
+      // Calculate total calories for the day
+      const totalCalories = Object.values(state.meals).flat().reduce((sum, m) => sum + (Number(m.calories) || 0), 0);
+      
+      // Update the calories for today in weekly progress
+      state.weeklyProgress[dayIndex].calories = totalCalories;
     },
     removeMeal: (state, action) => {
       const { mealType, mealId } = action.payload;
-      state.meals[mealType] = state.meals[mealType].filter((meal) => meal.id !== mealId);
-    },
-    updateWeeklyProgress: (state) => {
-      // Example logic to update weekly progress based on the meals
-      const totals = { calories: 0 };
-      Object.values(state.meals).flat().forEach((meal) => {
-        totals.calories += meal.calories;
-      });
-
-      // Update the latest day with the current total
-      const todayIndex = new Date().getDay() - 1; // -1 because array starts at 0 (Mon = 0)
-      if (state.weeklyProgress[todayIndex]) {
-        state.weeklyProgress[todayIndex].calories = totals.calories;
+      if (state.meals[mealType]) {
+        state.meals[mealType] = state.meals[mealType].filter((meal) => meal.id !== mealId);
+        
+        // Recalculate weekly progress
+        const today = new Date().getDay();
+        const dayIndex = today === 0 ? 6 : today - 1;
+        
+        const totalCalories = Object.values(state.meals).flat().reduce((sum, meal) => sum + (Number(meal.calories) || 0), 0);
+        state.weeklyProgress[dayIndex].calories = totalCalories;
       }
     },
   },
 });
 
-export const { addMeal, removeMeal, updateWeeklyProgress } = mealsSlice.actions;
+export const { addMeal, removeMeal } = mealsSlice.actions;
 export default mealsSlice.reducer;

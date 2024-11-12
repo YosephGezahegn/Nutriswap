@@ -1,16 +1,29 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { addMeal, removeMeal, swapMeal } from '../redux/slices/mealsSlice';
-import { searchFood } from '../services/foodApi';
+import { useNavigate } from 'react-router-dom';
+import { addMeal, removeMeal } from '../redux/slices/mealsSlice';
+import { fetchSwapOptions, resetSwapState } from '../redux/slices/swapSlice';
 import FoodSearch from '../components/FoodSearch';
-import { setCurrentMeal, setSuggestedAlternative, resetSwap } from '../redux/slices/swapSlice';
+import SwapSuggestion from '../components/SwapSuggestion';
 
 function FoodLog() {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
-  const meals = useSelector((state) => state.meals);
-  const [showSearch, setShowSearch] = useState(false);
+  const meals = useSelector((state) => state.meals.meals) || {};
+  const swapOptions = useSelector((state) => state.swap.swapOptions);
+  const swapLoading = useSelector((state) => state.swap.loading);
   const [selectedMealType, setSelectedMealType] = useState(null);
-  const [swapOptions, setSwapOptions] = useState([]);
+  const [showSearch, setShowSearch] = useState(false);
+  const [selectedMeal, setSelectedMeal] = useState(null);
+  const [showSwapOptions, setShowSwapOptions] = useState(false);
+
+  // Daily goals for comparison
+  const DAILY_GOALS = {
+    calories: 2000,
+    protein: 150,
+    carbs: 250,
+    fat: 70,
+  };
 
   // Fixed meal times
   const MEAL_TIMES = {
@@ -19,48 +32,19 @@ function FoodLog() {
     dinner: '07:00 PM',
   };
 
-  // Daily goals
-  const DAILY_GOALS = {
-    calories: 2000,
-    protein: 150,
-    carbs: 250,
-    fat: 70,
-  };
-
-  // Calculate current totals based on the meals added
-  const calculateCurrentTotals = () => {
-    const totals = {
-      calories: 0,
-      protein: 0,
-      carbs: 0,
-      fat: 0,
-    };
-
-    Object.values(meals).flat().forEach((meal) => {
-      totals.calories += meal.calories;
-      totals.protein += meal.protein;
-      totals.carbs += meal.carbs;
-      totals.fat += meal.fat;
-    });
-
-    return totals;
-  };
-
-  const currentTotals = calculateCurrentTotals();
-
   // Add meal to breakfast, lunch, or dinner
   const handleAddMeal = (mealData) => {
     if (!selectedMealType) return;
 
     const newMeal = {
-      id: new Date().getTime(),
-      name: mealData.label || 'Unknown Meal',
+      id: Date.now(),
+      name: mealData.name || 'Unknown Meal',
       time: MEAL_TIMES[selectedMealType] || 'Unknown Time',
-      items: Array.isArray(mealData.ingredientLines) ? mealData.ingredientLines : [],
-      calories: Math.round(mealData.totalNutrients?.ENERC_KCAL?.quantity || 0),
-      protein: Math.round(mealData.totalNutrients?.PROCNT?.quantity || 0),
-      carbs: Math.round(mealData.totalNutrients?.CHOCDF?.quantity || 0),
-      fat: Math.round(mealData.totalNutrients?.FAT?.quantity || 0),
+      items: mealData.items || [],
+      calories: Number(mealData.calories) || 0,
+      protein: Number(mealData.protein) || 0,
+      carbs: Number(mealData.carbs) || 0,
+      fat: Number(mealData.fat) || 0,
     };
 
     dispatch(addMeal({ mealType: selectedMealType, meal: newMeal }));
@@ -73,48 +57,49 @@ function FoodLog() {
     dispatch(removeMeal({ mealType, mealId }));
   };
 
-  // Handle the swap meal logic to fetch alternatives
-  const handleSwapMeal = async (meal) => {
-    dispatch(setCurrentMeal(meal));
-    setShowSwapOptions(true);
-
-    try {
-      const results = await searchFood('healthy meals');
-      const validAlternatives = results
-        .filter((result) => result?.recipe)
-        .map((result) => {
-          const { label, calories, totalNutrients, ingredientLines } = result.recipe;
-          return {
-            name: label,
-            calories: Math.round(calories || 0),
-            protein: Math.round(totalNutrients?.PROCNT?.quantity || 0),
-            carbs: Math.round(totalNutrients?.CHOCDF?.quantity || 0),
-            fat: Math.round(totalNutrients?.FAT?.quantity || 0),
-            items: ingredientLines || [],
-          };
-        });
-
-      setSwapOptions(validAlternatives);
-    } catch (error) {
-      console.error('Error fetching swap options:', error);
-    }
+  // Check if meal exceeds daily goals
+  const shouldShowSwap = (meal) => {
+    return (
+      meal.calories > DAILY_GOALS.calories / 3 ||
+      meal.protein > DAILY_GOALS.protein / 3 ||
+      meal.carbs > DAILY_GOALS.carbs / 3 ||
+      meal.fat > DAILY_GOALS.fat / 3
+    );
   };
 
-  // Handle selecting a meal to swap with the current meal
-  const handleSelectSwap = (newMeal) => {
-    const mealType = Object.keys(meals).find((type) =>
-      meals[type].some((meal) => meal.id === newMeal.id)
-    );
+  // Handle swap meal functionality
+  const handleSwapMeal = (meal) => {
+    setSelectedMeal(meal);
+    dispatch(fetchSwapOptions(meal));
+    setShowSwapOptions(true);
+  };
 
-    if (mealType) {
-      dispatch(swapMeal({ mealType, mealId: newMeal.id, newMeal }));
+  // Navigate to recipe detail
+  const handleViewRecipe = (recipeId) => {
+    navigate(`/recipe/${recipeId}`);
+  };
+
+  // Select a meal to swap
+  const handleSelectSwap = (newMeal) => {
+    if (selectedMeal) {
+      const mealType = Object.keys(meals).find((type) =>
+        meals[type].some((meal) => meal.id === selectedMeal.id)
+      );
+
+      if (mealType) {
+        dispatch(addMeal({ mealType, meal: { ...newMeal, id: selectedMeal.id, time: selectedMeal.time } }));
+        dispatch(removeMeal({ mealType, mealId: selectedMeal.id }));
+      }
+
+      setShowSwapOptions(false);
+      setSelectedMeal(null);
+      dispatch(resetSwapState());
     }
-    setShowSwapOptions(false);
-    dispatch(resetSwap());
   };
 
   // Render meals for breakfast, lunch, or dinner
   const renderMeals = (mealType) => {
+    const mealsForType = meals[mealType] || [];
     return (
       <div className="card mb-4">
         <div className="flex justify-between items-center mb-2">
@@ -131,8 +116,8 @@ function FoodLog() {
             + Add Meal
           </button>
         </div>
-        {meals[mealType]?.length > 0 ? (
-          meals[mealType].map((meal) => (
+        {mealsForType.length > 0 ? (
+          mealsForType.map((meal) => (
             <div key={meal.id} className="border-b border-gray-200 py-2">
               <div className="flex justify-between items-center">
                 <div>
@@ -143,16 +128,24 @@ function FoodLog() {
                 </div>
                 <div className="flex items-center space-x-4">
                   <button
+                    className="text-blue-500 hover:text-blue-700"
+                    onClick={() => handleViewRecipe(meal.recipeId)}
+                  >
+                    Details
+                  </button>
+                  {shouldShowSwap(meal) && (
+                    <button
+                      className="text-orange-500 hover:text-orange-700"
+                      onClick={() => handleSwapMeal(meal)}
+                    >
+                      Swap
+                    </button>
+                  )}
+                  <button
                     className="text-red-500 hover:text-red-700"
                     onClick={() => handleRemoveMeal(mealType, meal.id)}
                   >
                     Remove
-                  </button>
-                  <button
-                    className="text-blue-500 hover:text-blue-700"
-                    onClick={() => handleSwapMeal(meal)}
-                  >
-                    Swap
                   </button>
                 </div>
               </div>
@@ -186,72 +179,36 @@ function FoodLog() {
       {/* Dinner Section */}
       {renderMeals('dinner')}
 
-      {/* Food Search for Adding Meals */}
+      {/* Food Search Modal */}
       {showSearch && (
-        <FoodSearch
-          onSelect={(mealData) => handleAddMeal(mealData)}
-        />
-      )}
-
-      {/* Swap Meal Options - Popup Style */}
-      {showSwapOptions && (
-        <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
-          <div className="swap-options border rounded shadow-md p-6 bg-white w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">Swap Options for {selectedMeal?.name}</h3>
-
-            <div className="max-h-60 overflow-y-auto space-y-4">
-              {swapOptions.length > 0 ? (
-                swapOptions.map((option, index) => (
-                  <div key={index} className="flex flex-col p-2 border rounded-md hover:bg-gray-50">
-                    {/* Nutritional Comparison */}
-                    <div className="flex flex-col space-y-1 mb-2">
-                      <p>
-                        <span className="font-bold">Calories:</span> {selectedMeal?.calories} → {option.calories}
-                      </p>
-                      <p>
-                        <span className="font-bold">Protein:</span> {selectedMeal?.protein}g → {option.protein}g
-                      </p>
-                      <p>
-                        <span className="font-bold">Carbs:</span> {selectedMeal?.carbs}g → {option.carbs}g
-                      </p>
-                      <p>
-                        <span className="font-bold">Fat:</span> {selectedMeal?.fat}g → {option.fat}g
-                      </p>
-                    </div>
-
-                    {/* Swap Option */}
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="font-medium">{option.name}</h4>
-                        <p className="text-sm text-gray-600">
-                          Calories: {option.calories}, Protein: {option.protein}g, Carbs: {option.carbs}g, Fat: {option.fat}g
-                        </p>
-                      </div>
-                      <button
-                        className="text-green-600 hover:text-green-800"
-                        onClick={() => handleSelectSwap(option)}
-                      >
-                        Swap
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-600">No suitable swap options found.</p>
-              )}
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">Add {selectedMealType} Meal</h3>
+              <button
+                onClick={() => setShowSearch(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
             </div>
-
-            <button
-              className="btn btn-secondary mt-4"
-              onClick={() => {
-                setShowSwapOptions(false);
-                dispatch(resetSwap());
-              }}
-            >
-              Cancel
-            </button>
+            <FoodSearch onSelect={handleAddMeal} />
           </div>
         </div>
+      )}
+
+      {/* Swap Meal Options */}
+      {showSwapOptions && (
+        <SwapSuggestion
+          meal={selectedMeal}
+          suggestion={swapOptions.length > 0 ? swapOptions[0] : null}
+          onSwap={handleSelectSwap}
+          onClose={() => {
+            setShowSwapOptions(false);
+            setSelectedMeal(null);
+            dispatch(resetSwapState());
+          }}
+        />
       )}
     </div>
   );
