@@ -5,24 +5,26 @@ export const fetchSwapOptions = createAsyncThunk(
   'swap/fetchSwapOptions',
   async (meal, thunkAPI) => {
     try {
-      // Search for healthier alternatives based on the meal type
-      const searchQuery = `healthy low calorie ${meal.name}`;
+      // Simplify search query to get more results
+      const searchQuery = `${meal.name}`;
       const results = await searchFood(searchQuery);
-      
+
       return results
         .filter((result) => {
           const recipe = result?.recipe;
           if (!recipe) return false;
-          
+
           // Filter for meals with lower calories
           const calories = Math.round(recipe.calories || 0);
           return calories < meal.calories && calories > 0;
         })
         .map((result) => {
           const recipe = result.recipe;
+
+          // Ensure all required properties exist, fallback to defaults if needed
           return {
             id: recipe.uri.split('#recipe_')[1],
-            name: recipe.label,
+            name: recipe.label || 'Unknown Recipe',
             calories: Math.round(recipe.calories || 0),
             protein: Math.round(recipe.totalNutrients?.PROCNT?.quantity || 0),
             carbs: Math.round(recipe.totalNutrients?.CHOCDF?.quantity || 0),
@@ -38,6 +40,7 @@ export const fetchSwapOptions = createAsyncThunk(
           return aDiff - bDiff;
         });
     } catch (error) {
+      console.error('Error fetching swap options:', error); // Log the actual error for debugging
       return thunkAPI.rejectWithValue('Error fetching swap options.');
     }
   }
@@ -64,12 +67,12 @@ const swapSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchSwapOptions.fulfilled, (state, action) => {
-        state.swapOptions = action.payload;
+        state.swapOptions = action.payload || []; // Ensure payload is an array even if empty
         state.loading = false;
       })
       .addCase(fetchSwapOptions.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload || 'An unexpected error occurred.'; // Default error message
       });
   },
 });

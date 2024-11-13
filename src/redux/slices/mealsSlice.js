@@ -6,6 +6,7 @@ const initialState = {
     lunch: [],
     dinner: [],
   },
+  bookmarkedMeals: [],
   weeklyProgress: [
     { day: 'Mon', calories: 2100 },
     { day: 'Tue', calories: 1950 },
@@ -29,20 +30,16 @@ const mealsSlice = createSlice({
       state.meals[mealType].push({
         ...meal,
         id: meal.id || Date.now(),
+        recipeId: meal.recipeId || 'recipe_default',
         calories: Number(meal.calories) || 0,
         protein: Number(meal.protein) || 0,
         carbs: Number(meal.carbs) || 0,
         fat: Number(meal.fat) || 0,
       });
       
-      // Update weekly progress
       const today = new Date().getDay();
-      const dayIndex = today === 0 ? 6 : today - 1; // Convert to 0-6 range where 0 is Monday
-      
-      // Calculate total calories for the day
+      const dayIndex = today === 0 ? 6 : today - 1;
       const totalCalories = Object.values(state.meals).flat().reduce((sum, m) => sum + (Number(m.calories) || 0), 0);
-      
-      // Update the calories for today in weekly progress
       state.weeklyProgress[dayIndex].calories = totalCalories;
     },
     removeMeal: (state, action) => {
@@ -50,16 +47,35 @@ const mealsSlice = createSlice({
       if (state.meals[mealType]) {
         state.meals[mealType] = state.meals[mealType].filter((meal) => meal.id !== mealId);
         
-        // Recalculate weekly progress
         const today = new Date().getDay();
         const dayIndex = today === 0 ? 6 : today - 1;
-        
         const totalCalories = Object.values(state.meals).flat().reduce((sum, meal) => sum + (Number(meal.calories) || 0), 0);
         state.weeklyProgress[dayIndex].calories = totalCalories;
       }
     },
+    toggleBookmark: (state, action) => {
+      const meal = action.payload;
+      const existingIndex = state.bookmarkedMeals.findIndex(m => m.id === meal.id);
+      
+      if (existingIndex >= 0) {
+        state.bookmarkedMeals.splice(existingIndex, 1);
+      } else {
+        state.bookmarkedMeals.push(meal);
+      }
+    },
+    addMealFromImage: (state, action) => {
+      const { mealType, meal } = action.payload;
+      if (!state.meals[mealType]) {
+        state.meals[mealType] = [];
+      }
+      state.meals[mealType].push({
+        ...meal,
+        id: Date.now(),
+        imageSource: 'camera',
+      });
+    },
   },
 });
 
-export const { addMeal, removeMeal } = mealsSlice.actions;
+export const { addMeal, removeMeal, toggleBookmark, addMealFromImage } = mealsSlice.actions;
 export default mealsSlice.reducer;

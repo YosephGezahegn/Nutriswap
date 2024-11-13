@@ -6,7 +6,6 @@ function Home() {
   const meals = useSelector((state) => state.meals.meals);
   const weeklyProgress = useSelector((state) => state.meals.weeklyProgress);
 
-  // Daily goals
   const DAILY_GOALS = {
     calories: 2000,
     protein: 150,
@@ -14,7 +13,6 @@ function Home() {
     fat: 70,
   };
 
-  // Calculate current totals based on the meals in the Redux store
   const calculateCurrentTotals = () => {
     const totals = {
       calories: 0,
@@ -37,33 +35,59 @@ function Home() {
 
   const currentTotals = calculateCurrentTotals();
 
-  const MacroCard = ({ title, current, goal, unit = 'g' }) => {
-    const isOverGoal = current > goal;
-    const progressColor = isOverGoal ? 'red-500' : 'green-500';
-    const textColor = isOverGoal ? 'text-red-500' : 'text-green-500';
+  const MacroCard = ({ title, current, goal, unit = 'g', category }) => {
+    const percentage = Math.min((current / goal) * 100, 100);
+    const getColor = () => {
+      if (percentage > 100) return 'red';
+      if (percentage > 80) return 'orange';
+      return '#10B981';
+    };
 
     return (
       <div className="card p-4 rounded-md shadow-md">
-        <h3 className="text-lg font-semibold mb-2">{title}</h3>
         <div className="flex justify-between items-center mb-2">
-          <span className="text-gray-600">Goal</span>
-          <span className="font-bold">{goal}{unit}</span>
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <span className="text-sm text-gray-500">{category}</span>
         </div>
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-gray-600">Intake</span>
-          <span className={`font-bold ${textColor}`}>{current || 0}{unit}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-gray-600">Remaining</span>
-          <span className={`font-bold ${textColor}`}>
-            {isOverGoal ? `+${(current - goal).toFixed(1)}` : (goal - current).toFixed(1)}{unit}
-          </span>
-        </div>
-        <div className="mt-2 bg-gray-200 rounded-full h-2">
-          <div
-            className={`bg-${progressColor} rounded-full h-2 transition-all duration-300`}
-            style={{ width: `${Math.min(((current || 0) / goal) * 100, 100)}%` }}
-          />
+        
+        <div className="relative pt-8">
+          <svg className="w-32 h-32 mx-auto" viewBox="0 0 100 100">
+            <circle
+              cx="50"
+              cy="50"
+              r="45"
+              fill="none"
+              stroke="#f3f4f6"
+              strokeWidth="10"
+            />
+            <circle
+              cx="50"
+              cy="50"
+              r="45"
+              fill="none"
+              stroke={getColor()}
+              strokeWidth="10"
+              strokeDasharray={`${percentage * 2.83} 283`}
+              transform="rotate(-90 50 50)"
+              style={{ transition: 'stroke-dasharray 0.5s ease' }}
+            />
+            <text
+              x="50"
+              y="50"
+              textAnchor="middle"
+              dy="0.3em"
+              className="text-2xl font-bold"
+              fill={getColor()}
+            >
+              {Math.round(percentage)}%
+            </text>
+          </svg>
+          
+          <div className="mt-4 text-center">
+            <div className="text-sm text-gray-600">
+              {current}/{goal}{unit}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -73,32 +97,34 @@ function Home() {
     <div className="space-y-6 px-2 md:px-4">
       <h2 className="text-2xl font-bold">Daily Overview</h2>
 
-      {/* Macro Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MacroCard
           title="Calories"
           current={currentTotals.calories}
           goal={DAILY_GOALS.calories}
           unit="kcal"
+          category="Energy"
         />
         <MacroCard
           title="Protein"
           current={currentTotals.protein}
           goal={DAILY_GOALS.protein}
+          category="Macros"
         />
         <MacroCard
           title="Carbohydrates"
           current={currentTotals.carbs}
           goal={DAILY_GOALS.carbs}
+          category="Macros"
         />
         <MacroCard
           title="Fat"
           current={currentTotals.fat}
           goal={DAILY_GOALS.fat}
+          category="Macros"
         />
       </div>
 
-      {/* Weekly Progress Chart */}
       <div className="card p-4 rounded-md shadow-md">
         <h3 className="text-lg font-semibold mb-4">Weekly Progress</h3>
         <div className="w-full h-64">

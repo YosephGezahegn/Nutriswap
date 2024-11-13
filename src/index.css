@@ -23,3 +23,42 @@ body {
 .card {
   @apply bg-white rounded-xl shadow-md p-6;
 }
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .card {
+    @apply rounded-none shadow-none mx-[-1rem] first:mt-[-1rem];
+  }
+
+  .container {
+    @apply px-0;
+  }
+
+  body {
+    @apply bg-white;
+  }
+
+  /* Bottom Navigation Spacing */
+  main {
+    padding-bottom: 5rem !important;
+  }
+
+  /* Mobile-specific Typography */
+  h1 {
+    @apply text-2xl;
+  }
+
+  h2 {
+    @apply text-xl;
+  }
+
+  /* Mobile-friendly Buttons */
+  .btn {
+    @apply w-full justify-center flex items-center;
+  }
+
+  /* Mobile-optimized Forms */
+  input, select, textarea {
+    @apply text-base py-3;
+  }
+}

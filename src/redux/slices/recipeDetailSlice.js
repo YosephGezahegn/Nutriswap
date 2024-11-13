@@ -5,12 +5,10 @@ const BASE_URL = 'https://api.edamam.com/api/recipes/v2';
 const APP_ID = '2ba6c4af';
 const APP_KEY = '85b0a40c803717b78498';
 
-// Thunk to fetch recipe details by ID
 export const fetchRecipeDetail = createAsyncThunk(
   'recipeDetail/fetchRecipeDetail',
   async (id, { rejectWithValue }) => {
     try {
-      // Ensure the query parameters are correct
       const url = `${BASE_URL}/${id}?type=public&?app_id=${APP_ID}&app_key=${APP_KEY}`;
       const response = await axios.get(url);
       return response.data.recipe;
@@ -34,6 +32,11 @@ const recipeDetailSlice = createSlice({
       state.loading = false;
       state.error = null;
     },
+    setDefaultRecipe: (state, action) => {
+      state.data = action.payload;
+      state.loading = false;
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -52,5 +55,5 @@ const recipeDetailSlice = createSlice({
   },
 });
 
-export const { resetRecipeDetail } = recipeDetailSlice.actions;
+export const { resetRecipeDetail, setDefaultRecipe } = recipeDetailSlice.actions;
 export default recipeDetailSlice.reducer;
