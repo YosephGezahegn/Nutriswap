@@ -27,6 +27,7 @@ function FoodSearch({ onSelect }) {
       carbs: Math.round(recipe.totalNutrients?.CHOCDF?.quantity || 0),
       fat: Math.round(recipe.totalNutrients?.FAT?.quantity || 0),
       items: recipe.ingredientLines || [],
+      recipeId: recipe.uri.split('#recipe_')[1]
     };
     onSelect(formattedRecipe);
   };
@@ -64,7 +65,7 @@ function FoodSearch({ onSelect }) {
                     />
                   )}
                   <div>
-                    <div className="font-medium">{recipe.label}</div>
+                    <div className="font-medium text-primary">{recipe.label}</div>
                     <div className="text-sm text-gray-600">
                       {Math.round(recipe.totalNutrients?.ENERC_KCAL?.quantity || 0)} kcal per serving
                     </div>
@@ -81,7 +82,10 @@ function FoodSearch({ onSelect }) {
                   <button
                     type="button"
                     className="btn btn-primary text-sm px-4 py-2 rounded-md"
-                    onClick={() => handleAddMeal(recipe)}
+                    onClick={() => { 
+                      handleAddMeal(recipe);
+                      console.log("HIII"+recipe.uri.split('#recipe_')[1])
+                    }}
                   >
                     Add
                   </button>

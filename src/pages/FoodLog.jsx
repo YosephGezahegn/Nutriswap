@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { addMeal, removeMeal } from '../redux/slices/mealsSlice';
+import { addMeal, removeMeal, toggleBookmark } from '../redux/slices/mealsSlice';
 import { fetchSwapOptions, resetSwapState } from '../redux/slices/swapSlice';
+import { CameraIcon, PlusIcon, ArrowPathIcon, BookmarkIcon } from '@heroicons/react/24/outline';
 import FoodSearch from '../components/FoodSearch';
 import SwapSuggestion from '../components/SwapSuggestion';
 import ImageCapture from '../components/ImageCapture';
@@ -13,6 +14,7 @@ function FoodLog() {
   const meals = useSelector((state) => state.meals.meals) || {};
   const swapOptions = useSelector((state) => state.swap.swapOptions) || [];
   const swapLoading = useSelector((state) => state.swap.loading);
+  const bookmarkedMeals = useSelector((state) => state.meals.bookmarkedMeals);
   const [selectedMealType, setSelectedMealType] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -39,12 +41,11 @@ function FoodLog() {
       id: Date.now(),
       name: mealData.name || 'Unknown Meal',
       time: MEAL_TIMES[selectedMealType] || 'Unknown Time',
-      items: mealData.items || [],
       calories: Number(mealData.calories) || 0,
       protein: Number(mealData.protein) || 0,
       carbs: Number(mealData.carbs) || 0,
       fat: Number(mealData.fat) || 0,
-      recipeId: mealData.recipeId || 'recipe_default',
+      recipeId: mealData.recipeId
     };
 
     dispatch(addMeal({ mealType: selectedMealType, meal: newMeal }));
@@ -67,14 +68,12 @@ function FoodLog() {
 
   const handleSwapMeal = (meal) => {
     setSelectedMeal(meal);
-   //  Continuing with the FoodLog.jsx file content
-
     dispatch(fetchSwapOptions(meal));
     setShowSwapOptions(true);
   };
 
   const handleViewRecipe = (recipeId) => {
-    navigate(`/recipe/${recipeId || 'default'}`);
+    navigate(`/recipe/${recipeId}`);
   };
 
   const handleSelectSwap = (newMeal) => {
@@ -84,8 +83,15 @@ function FoodLog() {
       );
 
       if (mealType) {
-        dispatch(addMeal({ mealType, meal: { ...newMeal, id: selectedMeal.id, time: selectedMeal.time } }));
         dispatch(removeMeal({ mealType, mealId: selectedMeal.id }));
+        dispatch(addMeal({ 
+          mealType, 
+          meal: { 
+            ...newMeal, 
+            id: Date.now(), 
+            time: selectedMeal.time 
+          } 
+        }));
       }
 
       setShowSwapOptions(false);
@@ -94,85 +100,87 @@ function FoodLog() {
     }
   };
 
+  const handleToggleBookmark = (meal) => {
+    dispatch(toggleBookmark({
+      ...meal,
+      id: Date.now(),
+      recipeId: meal.recipeId || 'default',
+    }));
+  };
+
   const renderMealTypeHeader = (mealType) => (
     <div className="flex justify-between items-center mb-2">
-      <h3 className="text-xl font-semibold capitalize">
+      <h3 className="text-xl font-semibold capitalize dark:text-dark-text">
         {mealType} - {MEAL_TIMES[mealType]}
       </h3>
       <div className="flex space-x-2">
         <button
-          className="text-primary hover:text-primary/80"
+          className="text-primary hover:text-primary/80 p-2"
           onClick={() => {
             setSelectedMealType(mealType);
             setShowCamera(true);
           }}
         >
-          📷 Add
+          <CameraIcon className="h-5 w-5" />
         </button>
         <button
-          className="text-primary hover:text-primary/80"
+          className="text-primary hover:text-primary/80 p-2"
           onClick={() => {
             setSelectedMealType(mealType);
             setShowSearch(true);
           }}
         >
-          + Add Meal
+          <PlusIcon className="h-5 w-5" />
         </button>
       </div>
     </div>
   );
 
-  const renderMealCard = (meal, mealType) => (
-    <div key={meal.id} className="border-b border-gray-200 py-2 last:border-b-0">
-      <div className="flex justify-between items-center">
-        <div className="flex-1">
-          <h4 className="text-lg font-medium">{meal.name}</h4>
-          <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-            <span>Calories: {meal.calories}</span>
-            <span>Protein: {meal.protein}g</span>
-            <span>Carbs: {meal.carbs}g</span>
-            <span>Fat: {meal.fat}g</span>
+  const renderMealCard = (meal, mealType) => {
+    const isBookmarked = bookmarkedMeals.some(bm => bm.recipeId === meal.recipeId);
+    
+    return (
+      <div key={meal.id} className="border-b border-gray-200 py-2 last:border-b-0">
+        <div className="flex justify-between items-center">
+          <div className="flex-1">
+            <h4 className="text-lg font-medium text-primary">{meal.name}</h4>
+            <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+              <span>Calories: {meal.calories}</span>
+              <span>Protein: {meal.protein}g</span>
+              <span>Carbs: {meal.carbs}g</span>
+              <span>Fat: {meal.fat}g</span>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => handleToggleBookmark(meal)}
+              className={`p-1 rounded-full ${isBookmarked ? 'text-primary' : 'text-gray-400'}`}
+            >
+              <BookmarkIcon className="h-5 w-5" />
+            </button>
+            {shouldShowSwap(meal) && (
+              <button
+                className="text-orange-500 hover:text-orange-700"
+                onClick={() => handleSwapMeal(meal)}
+              >
+                <ArrowPathIcon className="h-5 w-5" />
+              </button>
+            )}
+            <button
+              className="text-red-500 hover:text-red-700"
+              onClick={() => handleRemoveMeal(mealType, meal.id)}
+            >
+              ✕
+            </button>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <button
-            className="text-blue-500 hover:text-blue-700"
-            onClick={() => handleViewRecipe(meal.recipeId)}
-          >
-            Details
-          </button>
-          {shouldShowSwap(meal) && (
-            <button
-              className="text-orange-500 hover:text-orange-700"
-              onClick={() => handleSwapMeal(meal)}
-            >
-              Swap
-            </button>
-          )}
-          <button
-            className="text-red-500 hover:text-red-700"
-            onClick={() => handleRemoveMeal(mealType, meal.id)}
-          >
-            Remove
-          </button>
-        </div>
       </div>
-      {meal.items?.length > 0 && (
-        <ul className="mt-2 space-y-1">
-          {meal.items.map((item, index) => (
-            <li key={index} className="text-sm text-gray-700 flex items-center">
-              <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
-              {item}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6 px-4">
-      <h2 className="text-2xl font-bold">Food Log</h2>
+      <h2 className="text-2xl font-bold dark:text-dark-text">Food Log</h2>
 
       {Object.entries(meals).map(([mealType, mealsList]) => (
         <div key={mealType} className="card">

@@ -8,6 +8,7 @@ import swapReducer from './slices/swapSlice';
 import authReducer from './slices/authSlice';
 import suggestionsReducer from './slices/suggestionsSlice';
 import recipeDetailReducer from './slices/recipeDetailSlice';
+import themeReducer from './slices/themeSlice';
 
 export const store = configureStore({
   reducer: {
@@ -19,5 +20,6 @@ export const store = configureStore({
     auth: authReducer,
     suggestions: suggestionsReducer,
     recipeDetail: recipeDetailReducer,
+    theme: themeReducer,
   },
 });

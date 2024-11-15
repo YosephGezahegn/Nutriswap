@@ -62,19 +62,6 @@ const RecipeDetail = () => {
   const currentRecipe = recipe || defaultRecipe;
   const isBookmarked = bookmarkedMeals.some(meal => meal.recipeId === id);
 
-  const nutrientCategories = {
-    energy: ['ENERC_KCAL'],
-    macros: ['PROCNT', 'CHOCDF', 'FAT'],
-    nutrients: ['FIBTG', 'CA', 'FE', 'VITC', 'VITD', 'TOCPHA'],
-  };
-
-  const categorizeNutrient = (nutrientKey) => {
-    if (nutrientCategories.energy.includes(nutrientKey)) return 'Energy';
-    if (nutrientCategories.macros.includes(nutrientKey)) return 'Macronutrients';
-    if (nutrientCategories.nutrients.includes(nutrientKey)) return 'Nutrients';
-    return 'Other';
-  };
-
   return (
     <div className="max-w-3xl mx-auto p-4">
       <div className="relative">
@@ -123,23 +110,35 @@ const RecipeDetail = () => {
 
         <div>
           <h2 className="text-xl font-semibold mb-4">Nutritional Information</h2>
-          {Object.entries(nutrientCategories).map(([category, nutrients]) => (
-            <div key={category} className="mb-4">
-              <h3 className="text-lg font-medium capitalize mb-2">{category}</h3>
-              <div className="space-y-2">
-                {Object.entries(currentRecipe.totalNutrients || {})
-                  .filter(([key]) => nutrients.includes(key))
-                  .map(([key, nutrient]) => (
-                    <div key={key} className="flex justify-between">
-                      <span>{nutrient.label}</span>
-                      <span>
-                        {Math.round(nutrient.quantity)} {nutrient.unit}
-                      </span>
-                    </div>
-                  ))}
-              </div>
+          <div className="bg-white border border-gray-800 p-4 rounded-md shadow-md max-w-md font-sans">
+            <div className="text-3xl font-extrabold pb-2 border-b-4 border-black">Nutrition Facts</div>
+            <div className="text-sm mt-1">Servings per container: <span className="font-bold">{currentRecipe.yield || 1}</span></div>
+            <div className="flex justify-between text-lg font-bold mt-2 border-b-4 border-black pb-2">
+              <div>Serving size</div>
+              <div>1 serving</div>
             </div>
-          ))}
+
+            <div className="flex justify-between items-center mt-3 text-4xl font-extrabold border-b-2 border-black pb-2">
+              <div>Calories</div>
+              <div>{currentRecipe.calories ? currentRecipe.calories.toFixed(0) : 0}</div>
+            </div>
+
+            <div className="text-right font-medium text-sm mt-2">% Daily Value *</div>
+
+            {currentRecipe.totalNutrients &&
+              Object.entries(currentRecipe.totalNutrients).map(([key, nutrient]) => (
+                <div key={key} className="flex justify-between border-t py-2">
+                  <span className="font-bold">{nutrient.label}</span>
+                  <span>
+                    {nutrient.quantity?.toFixed(2)} {nutrient.unit}
+                  </span>
+                </div>
+              ))}
+
+            <div className="flex flex-col mt-4 text-xs border-t pt-2">
+              <div>* The % Daily Value (DV) tells you how much a nutrient in a serving of food contributes to a daily diet. 2,000 calories a day is used for general nutrition advice.</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

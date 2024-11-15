@@ -9,7 +9,7 @@
 }
 
 body {
-  @apply bg-background min-h-screen;
+  @apply bg-background dark:bg-dark-background text-gray-900 dark:text-dark-text;
 }
 
 .btn {
@@ -17,17 +17,19 @@ body {
 }
 
 .btn-primary {
-  @apply bg-primary text-white hover:bg-primary/90;
+  @apply bg-primary text-white hover:bg-primary/90 dark:bg-dark-primary dark:hover:bg-dark-primary/90;
 }
 
 .card {
-  @apply bg-white rounded-xl shadow-md p-6;
+  @apply bg-white dark:bg-dark-card rounded-xl shadow-md p-6 
+         dark:shadow-gray-900/30 transition-colors duration-200;
 }
 
 /* Mobile Optimizations */
 @media (max-width: 768px) {
   .card {
-    @apply rounded-none shadow-none mx-[-1rem] first:mt-[-1rem];
+    @apply rounded-none shadow-none mx-[-1rem] first:mt-[-1rem]
+           dark:bg-dark-card;
   }
 
   .container {
@@ -35,7 +37,7 @@ body {
   }
 
   body {
-    @apply bg-white;
+    @apply bg-white dark:bg-dark-background text-gray-900 dark:text-dark-text;
   }
 
   /* Bottom Navigation Spacing */
@@ -45,11 +47,11 @@ body {
 
   /* Mobile-specific Typography */
   h1 {
-    @apply text-2xl;
+    @apply text-2xl dark:text-dark-text;
   }
 
   h2 {
-    @apply text-xl;
+    @apply text-xl dark:text-dark-text;
   }
 
   /* Mobile-friendly Buttons */
@@ -59,6 +61,55 @@ body {
 
   /* Mobile-optimized Forms */
   input, select, textarea {
-    @apply text-base py-3;
+    @apply text-base py-3 dark:bg-dark-card dark:text-dark-text 
+           dark:border-gray-700 dark:focus:border-dark-primary;
   }
+}
+
+/* Dark mode specific styles */
+.dark {
+  color-scheme: dark;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  @apply text-gray-500 text-primary;
+}
+
+.dark .btn-secondary {
+  @apply bg-dark-secondary text-white hover:bg-dark-secondary/90;
+}
+
+.dark .text-gray-600 {
+  @apply text-dark-muted;
+}
+
+/* Override dark text colors */
+.dark .text-black,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 {
+  @apply text-dark-text;
+}
+
+.dark .border-gray-200 {
+  @apply border-gray-700;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  @apply hover:bg-gray-800;
+}
+
+/* Charts and data visualization */
+.dark .recharts-cartesian-grid-horizontal line,
+.dark .recharts-cartesian-grid-vertical line {
+  @apply stroke-gray-700;
+}
+
+.dark .recharts-text {
+  @apply fill-dark-text;
+}
+
+.dark .recharts-legend-item-text {
+  @apply text-dark-text;
 }

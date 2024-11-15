@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { BookmarkIcon } from '@heroicons/react/24/outline';
 import FoodSearch from '../components/FoodSearch';
 import { updateSuggestions, setLoading } from '../redux/slices/suggestionsSlice';
+import { toggleBookmark } from '../redux/slices/mealsSlice';
 import { searchFood } from '../services/foodApi';
 
 function MealSuggestions() {
@@ -10,15 +12,20 @@ function MealSuggestions() {
   const navigate = useNavigate();
   const suggestions = useSelector((state) => state.suggestions.data);
   const loading = useSelector((state) => state.suggestions.loading);
+  const bookmarkedMeals = useSelector((state) => state.meals.bookmarkedMeals);
 
   useEffect(() => {
-    // Load default egg-based suggestions when component mounts
     const loadDefaultSuggestions = async () => {
       dispatch(setLoading(true));
       try {
-        const results = await searchFood('egg recipes');
+        const results = await searchFood('high protein low calorie healthy meals');
         const meals = results
-          .filter(result => result?.recipe)
+          .filter(result => {
+            const recipe = result?.recipe;
+            return recipe && 
+                   recipe.calories < 500 && // Low calorie
+                   recipe.totalNutrients?.PROCNT?.quantity > 20; // High protein
+          })
           .map(result => {
             const recipe = result.recipe;
             return {
@@ -30,8 +37,11 @@ function MealSuggestions() {
               fat: Math.round(recipe.totalNutrients?.FAT?.quantity || 0),
               image: recipe.image || 'https://via.placeholder.com/150',
               ingredients: recipe.ingredientLines || [],
+              recipeId: recipe.uri.split('#recipe_')[1],
             };
-          });
+          })
+          .sort((a, b) => (b.protein / b.calories) - (a.protein / a.calories)); // Sort by protein-to-calorie ratio
+
         dispatch(updateSuggestions(meals));
       } catch (error) {
         console.error('Error fetching default suggestions:', error);
@@ -62,6 +72,7 @@ function MealSuggestions() {
             fat: Math.round(recipe.totalNutrients?.FAT?.quantity || 0),
             image: recipe.image || 'https://via.placeholder.com/150',
             ingredients: recipe.ingredientLines || [],
+            recipeId: recipe.uri.split('#recipe_')[1],
           };
         });
       dispatch(updateSuggestions(meals));
@@ -76,6 +87,15 @@ function MealSuggestions() {
     navigate(`/recipe/${id}`);
   };
 
+  const handleToggleBookmark = (meal, e) => {
+    e.stopPropagation();
+    dispatch(toggleBookmark({
+      ...meal,
+      id: Date.now(),
+      recipeId: meal.id,
+    }));
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Meal Suggestions</h2>
@@ -85,46 +105,55 @@ function MealSuggestions() {
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg text-gray-600">Loading suggestions...</div>
+          <div className="text-lg text-muted">Loading suggestions...</div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {suggestions.length === 0 ? (
-            <div className="text-lg text-gray-600">No results found.</div>
+            <div className="text-lg text-muted text-primary">No results found.</div>
           ) : (
-            suggestions.map((meal) => (
-              <div
-                key={meal.id}
-                className="card hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => handleMealClick(meal.id)}
-              >
-                <img
-                  src={meal.image}
-                  alt={`Image of ${meal.name}`}
-                  className="w-full h-48 object-cover rounded-t-xl -mt-6 -mx-6 mb-4"
-                />
-                <div className="px-4 pb-4">
-                  <h3 className="text-lg font-semibold">{meal.name}</h3>
-                  <p className="text-sm text-gray-600">Calories: {meal.calories} kcal</p>
-                  <p className="text-sm text-gray-600">Protein: {meal.protein} g</p>
-                  <p className="text-sm text-gray-600">Carbs: {meal.carbs} g</p>
-                  <p className="text-sm text-gray-600">Fat: {meal.fat} g</p>
-                  {meal.ingredients && (
-                    <div className="mt-2">
-                      <p className="text-sm font-medium text-gray-700">Ingredients:</p>
-                      <ul className="text-sm text-gray-600">
-                        {meal.ingredients.slice(0, 3).map((ingredient, index) => (
-                          <li key={index} className="truncate">{ingredient}</li>
-                        ))}
-                        {meal.ingredients.length > 3 && (
-                          <li className="text-primary">+{meal.ingredients.length - 3} more...</li>
-                        )}
-                      </ul>
+            suggestions.map((meal) => {
+              const isBookmarked = bookmarkedMeals.some(bm => bm.recipeId === meal.id);
+              
+              return (
+                <div
+                  key={meal.id}
+                  className="card hover:shadow-lg transition-shadow cursor-pointer relative"
+                  onClick={() => handleMealClick(meal.id)}
+                >
+                  <button
+                    onClick={(e) => handleToggleBookmark(meal, e)}
+                    className={`absolute top-4 right-4 p-2 rounded-full bg-card/90 dark:bg-dark-card/90 shadow-md z-10 
+                      ${isBookmarked ? 'text-primary' : 'text-muted'}`}
+                  >
+                    <BookmarkIcon className="h-5 w-5" />
+                  </button>
+                  
+                  <img
+                    src={meal.image}
+                    alt={`Image of ${meal.name}`}
+                    className="w-full h-48 object-cover rounded-t-xl -mt-6 -mx-6 mb-4"
+                  />
+                  <div className="px-4 pb-4">
+                    <h3 className="text-lg font-semibold">{meal.name}</h3>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <div className="text-sm">
+                        <span className="font-medium text-primary">Calories:</span> {meal.calories}
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium text-primary">Protein:</span> {meal.protein}g
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium text-primary">Carbs:</span> {meal.carbs}g
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium text-primary">Fat:</span> {meal.fat}g
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

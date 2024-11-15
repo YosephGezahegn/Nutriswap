@@ -37,7 +37,7 @@ function Bookmarks() {
               )}
               <div className="p-4">
                 <div className="flex justify-between items-start">
-                  <h3 className="text-lg font-semibold">{meal.name}</h3>
+                  <h3 className="text-lg font-semibold">{meal.label}</h3>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
