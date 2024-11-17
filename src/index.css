@@ -9,7 +9,7 @@
 }
 
 body {
-  @apply bg-background dark:bg-dark-background text-gray-900 dark:text-dark-text;
+  @apply bg-background dark:bg-dark-background text-gray-900 dark:text-gray-200;
 }
 
 .btn {
@@ -25,6 +25,20 @@ body {
          dark:shadow-gray-900/30 transition-colors duration-200;
 }
 
+/* Form inputs dark mode */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+textarea,
+select {
+  @apply bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 
+         border-gray-300 dark:border-gray-600 focus:border-primary 
+         dark:focus:border-dark-primary focus:ring-primary/20 
+         dark:focus:ring-dark-primary/20;
+}
+
 /* Mobile Optimizations */
 @media (max-width: 768px) {
   .card {
@@ -37,7 +51,7 @@ body {
   }
 
   body {
-    @apply bg-white dark:bg-dark-background text-gray-900 dark:text-dark-text;
+    @apply bg-white dark:bg-dark-background;
   }
 
   /* Bottom Navigation Spacing */
@@ -47,11 +61,11 @@ body {
 
   /* Mobile-specific Typography */
   h1 {
-    @apply text-2xl dark:text-dark-text;
+    @apply text-2xl dark:text-gray-200;
   }
 
   h2 {
-    @apply text-xl dark:text-dark-text;
+    @apply text-xl dark:text-gray-200;
   }
 
   /* Mobile-friendly Buttons */
@@ -61,8 +75,7 @@ body {
 
   /* Mobile-optimized Forms */
   input, select, textarea {
-    @apply text-base py-3 dark:bg-dark-card dark:text-dark-text 
-           dark:border-gray-700 dark:focus:border-dark-primary;
+    @apply text-base py-3;
   }
 }
 
@@ -73,7 +86,7 @@ body {
 
 .dark input::placeholder,
 .dark textarea::placeholder {
-  @apply text-gray-500 text-primary;
+  @apply text-gray-400;
 }
 
 .dark .btn-secondary {
@@ -84,22 +97,6 @@ body {
   @apply text-dark-muted;
 }
 
-/* Override dark text colors */
-.dark .text-black,
-.dark .text-gray-900,
-.dark .text-gray-800,
-.dark .text-gray-700 {
-  @apply text-dark-text;
-}
-
-.dark .border-gray-200 {
-  @apply border-gray-700;
-}
-
-.dark .hover\:bg-gray-50:hover {
-  @apply hover:bg-gray-800;
-}
-
 /* Charts and data visualization */
 .dark .recharts-cartesian-grid-horizontal line,
 .dark .recharts-cartesian-grid-vertical line {
@@ -107,9 +104,34 @@ body {
 }
 
 .dark .recharts-text {
-  @apply fill-dark-text;
+  @apply fill-gray-300;
 }
 
 .dark .recharts-legend-item-text {
-  @apply text-dark-text;
+  @apply text-gray-300;
+}
+
+/* Calendar customization */
+.react-calendar {
+  @apply w-full border-0 shadow-none;
+}
+
+.dark .react-calendar {
+  @apply bg-transparent text-gray-200;
+}
+
+.dark .react-calendar__tile {
+  @apply text-gray-200 hover:bg-gray-700;
+}
+
+.dark .react-calendar__tile--active {
+  @apply bg-primary text-white;
+}
+
+.dark .react-calendar__month-view__weekdays {
+  @apply text-gray-400;
+}
+
+.dark .react-calendar__navigation button {
+  @apply text-gray-200 hover:bg-gray-700;
 }

@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { addMeal, removeMeal, toggleBookmark } from '../redux/slices/mealsSlice';
 import { fetchSwapOptions, resetSwapState } from '../redux/slices/swapSlice';
-import { CameraIcon, PlusIcon, ArrowPathIcon, BookmarkIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, PlusIcon, ArrowPathIcon, BookmarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import FoodSearch from '../components/FoodSearch';
 import SwapSuggestion from '../components/SwapSuggestion';
 import ImageCapture from '../components/ImageCapture';
@@ -15,18 +15,12 @@ function FoodLog() {
   const swapOptions = useSelector((state) => state.swap.swapOptions) || [];
   const swapLoading = useSelector((state) => state.swap.loading);
   const bookmarkedMeals = useSelector((state) => state.meals.bookmarkedMeals);
+  const goals = useSelector((state) => state.dailyStats.goals);
   const [selectedMealType, setSelectedMealType] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState(null);
   const [showSwapOptions, setShowSwapOptions] = useState(false);
-
-  const DAILY_GOALS = {
-    calories: 2000,
-    protein: 150,
-    carbs: 250,
-    fat: 70,
-  };
 
   const MEAL_TIMES = {
     breakfast: '08:00 AM',
@@ -59,10 +53,10 @@ function FoodLog() {
 
   const shouldShowSwap = (meal) => {
     return (
-      meal.calories > DAILY_GOALS.calories / 3 ||
-      meal.protein > DAILY_GOALS.protein / 3 ||
-      meal.carbs > DAILY_GOALS.carbs / 3 ||
-      meal.fat > DAILY_GOALS.fat / 3
+      meal.calories > goals.calories / 3 ||
+      meal.protein > goals.protein / 3 ||
+      meal.carbs > goals.carbs / 3 ||
+      meal.fat > goals.fat / 3
     );
   };
 
@@ -110,7 +104,7 @@ function FoodLog() {
 
   const renderMealTypeHeader = (mealType) => (
     <div className="flex justify-between items-center mb-2">
-      <h3 className="text-xl font-semibold capitalize dark:text-dark-text">
+      <h3 className="text-xl font-semibold capitalize dark:text-gray-200">
         {mealType} - {MEAL_TIMES[mealType]}
       </h3>
       <div className="flex space-x-2">
@@ -140,11 +134,11 @@ function FoodLog() {
     const isBookmarked = bookmarkedMeals.some(bm => bm.recipeId === meal.recipeId);
     
     return (
-      <div key={meal.id} className="border-b border-gray-200 py-2 last:border-b-0">
+      <div key={meal.id} className="border-b border-gray-200 dark:border-gray-700 py-2 last:border-b-0">
         <div className="flex justify-between items-center">
           <div className="flex-1">
-            <h4 className="text-lg font-medium text-primary">{meal.name}</h4>
-            <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+            <h4 className="text-lg font-medium text-primary dark:text-dark-primary">{meal.name}</h4>
+            <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400">
               <span>Calories: {meal.calories}</span>
               <span>Protein: {meal.protein}g</span>
               <span>Carbs: {meal.carbs}g</span>
@@ -153,21 +147,31 @@ function FoodLog() {
           </div>
           <div className="flex items-center space-x-2">
             <button
+              onClick={() => handleViewRecipe(meal.recipeId)}
+              className="p-1 rounded-full text-gray-400 hover:text-primary dark:text-gray-500 
+                       dark:hover:text-dark-primary"
+            >
+              <InformationCircleIcon className="h-5 w-5" />
+            </button>
+            <button
               onClick={() => handleToggleBookmark(meal)}
-              className={`p-1 rounded-full ${isBookmarked ? 'text-primary' : 'text-gray-400'}`}
+              className={`p-1 rounded-full ${
+                isBookmarked ? 'text-primary dark:text-dark-primary' : 'text-gray-400 dark:text-gray-500'
+              }`}
             >
               <BookmarkIcon className="h-5 w-5" />
             </button>
             {shouldShowSwap(meal) && (
               <button
-                className="text-orange-500 hover:text-orange-700"
+                className="text-orange-500 hover:text-orange-700 dark:text-orange-400 
+                         dark:hover:text-orange-300"
                 onClick={() => handleSwapMeal(meal)}
               >
                 <ArrowPathIcon className="h-5 w-5" />
               </button>
             )}
             <button
-              className="text-red-500 hover:text-red-700"
+              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
               onClick={() => handleRemoveMeal(mealType, meal.id)}
             >
               ✕
@@ -180,16 +184,16 @@ function FoodLog() {
 
   return (
     <div className="space-y-6 px-4">
-      <h2 className="text-2xl font-bold dark:text-dark-text">Food Log</h2>
+      <h2 className="text-2xl font-bold dark:text-gray-200">Food Log</h2>
 
       {Object.entries(meals).map(([mealType, mealsList]) => (
-        <div key={mealType} className="card">
+        <div key={mealType} className="card dark:bg-gray-800">
           {renderMealTypeHeader(mealType)}
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {mealsList.length > 0 ? (
               mealsList.map((meal) => renderMealCard(meal, mealType))
             ) : (
-              <p className="text-gray-600 py-4">No meals added yet</p>
+              <p className="text-gray-600 dark:text-gray-400 py-4">No meals added yet</p>
             )}
           </div>
         </div>
@@ -197,12 +201,15 @@ function FoodLog() {
 
       {showSearch && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Add {selectedMealType} Meal</h3>
+              <h3 className="text-xl font-semibold dark:text-gray-200">
+                Add {selectedMealType} Meal
+              </h3>
               <button
                 onClick={() => setShowSearch(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 
+                         dark:hover:text-gray-300"
               >
                 ✕
               </button>

@@ -3,7 +3,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { BookmarkIcon } from '@heroicons/react/24/outline';
 import FoodSearch from '../components/FoodSearch';
-import { updateSuggestions, setLoading } from '../redux/slices/suggestionsSlice';
+import {
+  updateSuggestions,
+  setLoading,
+} from '../redux/slices/suggestionsSlice';
 import { toggleBookmark } from '../redux/slices/mealsSlice';
 import { searchFood } from '../services/foodApi';
 
@@ -14,19 +17,26 @@ function MealSuggestions() {
   const loading = useSelector((state) => state.suggestions.loading);
   const bookmarkedMeals = useSelector((state) => state.meals.bookmarkedMeals);
 
+  // Fetch default suggestions on component mount
   useEffect(() => {
     const loadDefaultSuggestions = async () => {
       dispatch(setLoading(true));
       try {
-        const results = await searchFood('high protein low calorie healthy meals');
+        const results = await searchFood(
+          'high protein low calorie healthy meals'
+        );
+
         const meals = results
-          .filter(result => {
+          ?.filter((result) => {
+            console.log(meals);
             const recipe = result?.recipe;
-            return recipe && 
-                   recipe.calories < 500 && // Low calorie
-                   recipe.totalNutrients?.PROCNT?.quantity > 20; // High protein
+            return (
+              recipe &&
+              recipe.calories < 500 &&
+              recipe.totalNutrients?.PROCNT?.quantity > 20 // High protein
+            );
           })
-          .map(result => {
+          ?.map((result) => {
             const recipe = result.recipe;
             return {
               id: recipe.uri.split('#recipe_')[1],
@@ -40,9 +50,9 @@ function MealSuggestions() {
               recipeId: recipe.uri.split('#recipe_')[1],
             };
           })
-          .sort((a, b) => (b.protein / b.calories) - (a.protein / a.calories)); // Sort by protein-to-calorie ratio
+          .sort((a, b) => b.protein / b.calories - a.protein / a.calories); // Sort by protein-to-calorie ratio
 
-        dispatch(updateSuggestions(meals));
+        dispatch(updateSuggestions(meals || []));
       } catch (error) {
         console.error('Error fetching default suggestions:', error);
       } finally {
@@ -53,29 +63,29 @@ function MealSuggestions() {
     loadDefaultSuggestions();
   }, [dispatch]);
 
+  // Search handler
   const handleSearch = async (searchQuery) => {
     if (typeof searchQuery !== 'string' || !searchQuery.trim()) return;
 
     dispatch(setLoading(true));
     try {
       const results = await searchFood(searchQuery);
-      const meals = results
-        .filter(result => result?.recipe)
-        .map(result => {
-          const recipe = result.recipe;
-          return {
-            id: recipe.uri.split('#recipe_')[1],
-            name: recipe.label,
-            calories: Math.round(recipe.calories || 0),
-            protein: Math.round(recipe.totalNutrients?.PROCNT?.quantity || 0),
-            carbs: Math.round(recipe.totalNutrients?.CHOCDF?.quantity || 0),
-            fat: Math.round(recipe.totalNutrients?.FAT?.quantity || 0),
-            image: recipe.image || 'https://via.placeholder.com/150',
-            ingredients: recipe.ingredientLines || [],
-            recipeId: recipe.uri.split('#recipe_')[1],
-          };
-        });
-      dispatch(updateSuggestions(meals));
+      const meals = results.hits?.map((result) => {
+        const recipe = result.recipe;
+        return {
+          id: recipe.uri.split('#recipe_')[1],
+          name: recipe.label,
+          calories: Math.round(recipe.calories || 0),
+          protein: Math.round(recipe.totalNutrients?.PROCNT?.quantity || 0),
+          carbs: Math.round(recipe.totalNutrients?.CHOCDF?.quantity || 0),
+          fat: Math.round(recipe.totalNutrients?.FAT?.quantity || 0),
+          image: recipe.image || 'https://via.placeholder.com/150',
+          ingredients: recipe.ingredientLines || [],
+          recipeId: recipe.uri.split('#recipe_')[1],
+        };
+      });
+
+      dispatch(updateSuggestions(meals || []));
     } catch (error) {
       console.error('Error fetching suggestions:', error);
     } finally {
@@ -83,17 +93,21 @@ function MealSuggestions() {
     }
   };
 
+  // Meal click handler
   const handleMealClick = (id) => {
     navigate(`/recipe/${id}`);
   };
 
+  // Bookmark toggle handler
   const handleToggleBookmark = (meal, e) => {
     e.stopPropagation();
-    dispatch(toggleBookmark({
-      ...meal,
-      id: Date.now(),
-      recipeId: meal.id,
-    }));
+    dispatch(
+      toggleBookmark({
+        ...meal,
+        id: Date.now(),
+        recipeId: meal.id,
+      })
+    );
   };
 
   return (
@@ -103,6 +117,7 @@ function MealSuggestions() {
       {/* Search Component */}
       <FoodSearch onSelect={handleSearch} />
 
+      {/* Suggestions Section */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="text-lg text-muted">Loading suggestions...</div>
@@ -110,11 +125,15 @@ function MealSuggestions() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {suggestions.length === 0 ? (
-            <div className="text-lg text-muted text-primary">No results found.</div>
+            <div className="text-lg text-muted text-primary">
+              No results found.
+            </div>
           ) : (
             suggestions.map((meal) => {
-              const isBookmarked = bookmarkedMeals.some(bm => bm.recipeId === meal.id);
-              
+              const isBookmarked = bookmarkedMeals.some(
+                (bm) => bm.recipeId === meal.id
+              );
+
               return (
                 <div
                   key={meal.id}
@@ -123,12 +142,13 @@ function MealSuggestions() {
                 >
                   <button
                     onClick={(e) => handleToggleBookmark(meal, e)}
-                    className={`absolute top-4 right-4 p-2 rounded-full bg-card/90 dark:bg-dark-card/90 shadow-md z-10 
-                      ${isBookmarked ? 'text-primary' : 'text-muted'}`}
+                    className={`absolute top-4 right-4 p-2 rounded-full bg-card/90 dark:bg-dark-card/90 shadow-md z-10 ${
+                      isBookmarked ? 'text-primary' : 'text-muted'
+                    }`}
                   >
                     <BookmarkIcon className="h-5 w-5" />
                   </button>
-                  
+
                   <img
                     src={meal.image}
                     alt={`Image of ${meal.name}`}
@@ -138,16 +158,24 @@ function MealSuggestions() {
                     <h3 className="text-lg font-semibold">{meal.name}</h3>
                     <div className="mt-2 grid grid-cols-2 gap-2">
                       <div className="text-sm">
-                        <span className="font-medium text-primary">Calories:</span> {meal.calories}
+                        <span className="font-medium text-primary">
+                          Calories:
+                        </span>{' '}
+                        {meal.calories}
                       </div>
                       <div className="text-sm">
-                        <span className="font-medium text-primary">Protein:</span> {meal.protein}g
+                        <span className="font-medium text-primary">
+                          Protein:
+                        </span>{' '}
+                        {meal.protein}g
                       </div>
                       <div className="text-sm">
-                        <span className="font-medium text-primary">Carbs:</span> {meal.carbs}g
+                        <span className="font-medium text-primary">Carbs:</span>{' '}
+                        {meal.carbs}g
                       </div>
                       <div className="text-sm">
-                        <span className="font-medium text-primary">Fat:</span> {meal.fat}g
+                        <span className="font-medium text-primary">Fat:</span>{' '}
+                        {meal.fat}g
                       </div>
                     </div>
                   </div>
