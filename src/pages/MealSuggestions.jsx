@@ -27,15 +27,15 @@ function MealSuggestions() {
         );
 
         const meals = results
-          ?.filter((result) => {
-            console.log(meals);
-            const recipe = result?.recipe;
-            return (
-              recipe &&
-              recipe.calories < 1500 &&
-              recipe.totalNutrients?.PROCNT?.quantity > 20 // High protein
-            );
-          })
+        ?.filter((result) => {
+          console.log(result);
+          const recipe = result?.recipe;
+          return (
+            recipe &&
+            recipe.calories < 2000 &&
+            recipe.totalNutrients?.PROCNT?.quantity > 30 // High protein
+          );
+        })
           ?.map((result) => {
             const recipe = result.recipe;
             return {
