@@ -23,7 +23,7 @@ function MealSuggestions() {
       dispatch(setLoading(true));
       try {
         const results = await searchFood(
-          'high protein low calorie healthy meals'
+          'high protein low calorie meals'
         );
 
         const meals = results
@@ -32,7 +32,7 @@ function MealSuggestions() {
             const recipe = result?.recipe;
             return (
               recipe &&
-              recipe.calories < 500 &&
+              recipe.calories < 1500 &&
               recipe.totalNutrients?.PROCNT?.quantity > 20 // High protein
             );
           })
